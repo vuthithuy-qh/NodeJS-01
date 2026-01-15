@@ -1,0 +1,27 @@
+<html>
+<head>
+    <title>Home EJS Page</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div class="topnav">
+    <a class="active" href="/">Home</a>
+    <a href="/create" class="active">Create user</a>
+</div>
+
+<div class="form-add-new">
+    <form action="/create-user" method="post">
+        <fieldset>
+            <legend>Add new user:</legend>
+            <label for="email">Email:</label>
+            <input type="email" id="email" name="email"><br><br>
+            <label for="name">Name:</label>
+            <input type="text" id="name" name="name"><br><br>
+            <label for="city">City:</label>
+            <input type="text" id="city" name="city"><br><br>
+            <input type="submit" value="Submit">
+        </fieldset>
+    </form>
+</div>
+</body>
+</html>
