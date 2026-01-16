@@ -1,17 +1,7 @@
-const Joi = require('joi');
+
 const AppError = require('../utils/AppError');
 
-// dinh nghia schema
-// const userSchema = Joi.object({
-//     id: Joi.number().integer().positive().optional(),
-//     email: Joi.string().email().required().message({
-//         'string.email' : 'Invalid email format'
-//     }),
-//     name: Joi.string().min(2).max(50).pattern(new RegExp('^[a-zA-ZÀ-ỹ\\\\s]+$'))
-//         .required().message({'string.pattern.base': 'Name must contain only letters and spaces'}),
-//     city: Joi.string().min(2).pattern(new RegExp('^[a-zA-ZÀ-ỹ\\s]+$')).required()
-//
-// })
+
 
 
 const validateUpsertUser = (req, res, next) => {
@@ -49,4 +39,22 @@ const validateUpsertUser = (req, res, next) => {
     next();
 };
 
-module.exports = {validateUpsertUser};
+const validate = (schema, property = 'body') => {
+    return (req, res, next) => {
+        const {error, value} = schema.validate(req[property], {
+            abortEarly: false
+        });
+
+        if (error) {
+            return res.status(400).json({
+                errorCode: 1,
+                message: error.details.map(e => e.message)
+            });
+        }
+
+        req[property] = value;
+        next();
+    }
+}
+
+module.exports = {validateUpsertUser, validate};
