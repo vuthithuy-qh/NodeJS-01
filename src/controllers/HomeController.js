@@ -1,80 +1,117 @@
 const connection = require('../config/database');
 const {raw} = require("express");
-const {getAllUsers, getUserById, updateUserById, removeUserById} = require('../services/crud');
+const {getAllUsers, getUserById, updateUserById, removeUserById, createUser} = require('../services/crud');
 
-const getHomePage= async (req, res) => {
+const getUsers= async (req, res) => {
 
-    let results = await getAllUsers();
-    return res.render('home.ejs', {listUsers: results});
+    try{
+        let results = await getAllUsers();
 
-}
-
-const postCreateUser = async (req,res) =>{
-
-    let  email = req.body.email;
-    let name = req.body.name;
-    let city = req.body.city;
-
-   // let {email, name, city} = req.body;
-    console.log(">>> Check data from client: ", email, name, city);
-
-
-    let [results, fields] = await connection.query(
-        `insert into Users (email, name, city) values (?,?,?)`,[email, name, city]
-    );
-
-    console.log(">>> Inserted data successfully:", results);
-    res.send("Create user successfully!");
-}
-
-const getCreatePage = (req, res) => {
-
-    return res.render('create.ejs');
-}
-
-const getUpdatePage = async (req, res) => {
-    const  userId = req.params.id;
-
-    let user = await getUserById(userId)
-    return res.render('edit.ejs', {userEdit : user});
-}
-
-const postUpdateUser = async (req,res) =>{
-
-    let  email = req.body.email;
-    let name = req.body.name;
-    let city = req.body.city;
-    let userId = req.body.id;
-
-   await updateUserById(email, name, city, userId);
-
-    res.redirect('/');
-}
-
-const postDeleteUser = async (req, res) =>{
-
-    const  userId = req.params.id;
-
-    let user = await getUserById(userId)
-    res.render('delete.ejs', {userEdit: user});
-}
-
-
-const postHandleRemoveUser = async (req, res) =>{
-    const userId = req.body.id;
-
-    const isDelete = removeUserById(userId);
-
-    if(isDelete){
-        return res.redirect('/');
-    }
-    else {
-        return res.send('User not found');
+        return res.status(200).json({
+            errorCodes: 0,
+            data: results
+        });
+    }catch (error){
+        return res.status(500).json({
+            message : "Error"
+        })
     }
 
 }
+
+const postUpsertUser = async (req,res) =>{
+    let {email, name, city, id} = req.body;
+
+    if(!email || !name || !city){
+        return res.status(400).json({
+            message: "Missing required parameters"
+        });
+    }
+
+    try{
+        if(id){
+            let results =  await updateUserById(email, name,city, id);
+
+            if(results && results.affectedRows > 0) {
+                return res.status(200).json({
+                    message: "User updated successfully",
+                    data: {id, email, name, city}
+                });
+            }else {
+                return res.status(404).json({
+                    message: "User Id doest not exist. Update failed"
+                })
+            }
+        }else {
+            let result = await createUser(email, name, city);
+            return res.status(201).json({
+                message: "User created successfully",
+                data: result
+            });
+        }
+    }catch (error){
+        console.log(error)
+        return res.status(500).json({
+            message : "error saving user"
+        });
+    }
+
+
+}
+
+
+const deleteUser = async (req, res) => {
+    const userId = req.params.id;
+
+    try {
+        const isDeleted = await removeUserById(userId);
+
+        if(isDeleted){
+            return res.status(200).json({
+                errorCodes: 0,
+                message: "User deleted successfully"
+            })
+        }else {
+            return res.status(404).json({
+                errorCodes: 2,
+                message: "User not found"
+            })
+        }
+    }catch (error) {
+        return res.status(500).json({
+            errorCodes: -1,
+            message : "Error deleting user"
+        })
+
+    }
+}
+
+const getUserBy= async (req, res) =>{
+    const userId = req.params.id;
+    try {
+        let user = await getUserById(userId);
+
+        if(user && Object.keys(user).length > 0){
+            return res.status(200).json({
+                errorCodes: 0,
+                data: user
+            })
+        }else {
+            return res.status(404).json({
+                errorCodes: 2,
+                message: "User not found"
+            })
+        }
+    }catch (error) {
+        return res.status(500).json({
+            errorCodes: -1,
+            message : "Error retrieving user"
+        })
+    }
+}
+
+
 module.exports = {
-    getHomePage, postCreateUser,
-    getCreatePage, getUpdatePage, postUpdateUser,
-    postDeleteUser, postHandleRemoveUser
+    getUsers, postUpsertUser, deleteUser,getUserBy
+
 }

@@ -16,11 +16,9 @@ app.use(express.json()); //for json
 app.use(express.urlencoded({extended: true})) // for form data
 
 
-const webRouter = require('./routes/web');
 
-
-// khai bao route
-app.use('/', webRouter);
+const apiRouter = require('./routes/api');
+app.use('/v1/api', apiRouter);
 
 
 
