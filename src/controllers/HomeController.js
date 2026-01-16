@@ -1,117 +1,30 @@
-const connection = require('../config/database');
-const {raw} = require("express");
-const {getAllUsers, getUserById, updateUserById, removeUserById, createUser} = require('../services/crud');
+const asyncHandler = require('../middleware/asynHandler')
+const userService = require('../services/user.service');
+const {respond} = require('../utils/responseHandler');
 
-const getUsers= async (req, res) => {
+const getUsers = asyncHandler(async (req, res) => {
+    const users = await userService.getAllUsers();
+    respond(res, 200, {errorCode: 0, data: users});
+});
 
-    try{
-        let results = await getAllUsers();
+const getUserById = asyncHandler(async (req, res) =>{
+    const user = await  userService.getUserById(Number(req.params.id));
+    respond(res, 200, {errorCode: 0, data: user});
+})
 
-        return res.status(200).json({
-            errorCodes: 0,
-            data: results
-        });
-    }catch (error){
-        return res.status(500).json({
-            message : "Error"
-        })
-    }
+const upsertUser = asyncHandler(async (req, res) => {
+    const user = await userService.upsertUser({
+        id: req.params.id,
+        ... req.body
+    });
+    respond(res, 200, {errorCode: 0, data: user});
+})
 
-}
-
-const postUpsertUser = async (req,res) =>{
-    let {email, name, city, id} = req.body;
-
-    if(!email || !name || !city){
-        return res.status(400).json({
-            message: "Missing required parameters"
-        });
-    }
-
-    try{
-        if(id){
-            let results =  await updateUserById(email, name,city, id);
-
-            if(results && results.affectedRows > 0) {
-                return res.status(200).json({
-                    message: "User updated successfully",
-                    data: {id, email, name, city}
-                });
-            }else {
-                return res.status(404).json({
-                    message: "User Id doest not exist. Update failed"
-                })
-            }
-        }else {
-            let result = await createUser(email, name, city);
-            return res.status(201).json({
-                message: "User created successfully",
-                data: result
-            });
-        }
-    }catch (error){
-        console.log(error)
-        return res.status(500).json({
-            message : "error saving user"
-        });
-    }
-
-
-}
-
-
-const deleteUser = async (req, res) => {
-    const userId = req.params.id;
-
-    try {
-        const isDeleted = await removeUserById(userId);
-
-        if(isDeleted){
-            return res.status(200).json({
-                errorCodes: 0,
-                message: "User deleted successfully"
-            })
-        }else {
-            return res.status(404).json({
-                errorCodes: 2,
-                message: "User not found"
-            })
-        }
-    }catch (error) {
-        return res.status(500).json({
-            errorCodes: -1,
-            message : "Error deleting user"
-        })
-
-    }
-}
-
-const getUserBy= async (req, res) =>{
-    const userId = req.params.id;
-    try {
-        let user = await getUserById(userId);
-
-        if(user && Object.keys(user).length > 0){
-            return res.status(200).json({
-                errorCodes: 0,
-                data: user
-            })
-        }else {
-            return res.status(404).json({
-                errorCodes: 2,
-                message: "User not found"
-            })
-        }
-    }catch (error) {
-        return res.status(500).json({
-            errorCodes: -1,
-            message : "Error retrieving user"
-        })
-    }
-}
-
+const deleteUser = asyncHandler(async (req, res) =>{
+    await userService.deleteUser(Number(req.params.id));
+    respond(res, 200, {errorCode: 0, message: 'User deleted successfully'});
+});
 
 module.exports = {
-    getUsers, postUpsertUser, deleteUser,getUserBy
-
+    getUsers, getUserById, upsertUser, deleteUser
 }

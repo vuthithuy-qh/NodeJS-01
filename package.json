@@ -19,6 +19,7 @@
     "dotenv": "16.0.3",
     "ejs": "3.1.8",
     "express": "5.1.0",
+    "joi": "^18.0.2",
     "mysql2": "2.3.3"
   },
   "devDependencies": {

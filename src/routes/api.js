@@ -1,14 +1,16 @@
 const express = require('express');
 const router = express.Router();
+const {validateUpsertUser } = require('../validators/userValidator');
 
-const {postUpsertUser, getUsers, deleteUser, getUserBy} = require('../controllers/HomeController');
-
-router.post('/users', postUpsertUser);
+const {upsertUser, getUsers, deleteUser, getUserById} = require('../controllers/HomeController');
 
 router.get('/users', getUsers);
+router.get('/users/:id', getUserById);
+
+router.post('/users',validateUpsertUser , upsertUser);
+router.put('/users/:id',validateUpsertUser , upsertUser);
 
 router.delete('/users/:id', deleteUser);
 
-router.get('/users/:id', getUserBy);
 
 module.exports=router;

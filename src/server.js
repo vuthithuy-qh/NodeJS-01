@@ -22,7 +22,7 @@ app.use('/v1/api', apiRouter);
 
 
 
-
+app.use(require('./middleware/errorHandler'));
 
 app.listen(port, () => {
     console.log(`Example app listening on port ${port}`)
