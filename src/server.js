@@ -23,6 +23,7 @@ app.use(express.urlencoded({ extended: true }));
 // routes
 app.use('/v1/auth', require('./routes/auth'));
 app.use('/v1/users/', require('./routes/user'));
+app.use('/v1/admin/', require('./routes/admin'));
 
 // error handler
 app.use(require('./middleware/errorHandler'));

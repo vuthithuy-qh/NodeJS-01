@@ -3,15 +3,31 @@ const AppError = require('../utils/ApiError');
 
 const {findAllUsers, findUserById, softDeleteUserById} = require('../repository/user.repository');
 const {respond} = require("../utils/responseHandler");
+const userService = require("../services/user.service")
+const {StatusCodes} = require("http-status-codes");
+
 
 const userController = {
-    getAllUser: asyncHandler(async (req, res) => {
-        const isAdmin = req.user?.admin;
+    getAllUsersForAdmin: asyncHandler(async (req, res) => {
+        const {page, page_size} = req.pagination;
 
-        const users = await findAllUsers(isAdmin);
 
-        respond(res, 200, users);
+        const {users, total} = await userService.getAllUsersForAdmin( req.pagination);
 
+        respond(res, StatusCodes.OK, {
+            data: users, page, page_size, total_page: Math.ceil(total/page_size)
+        })
+
+    }),
+
+    getPublishUsers: asyncHandler(async (req, res) => {
+        const {page, page_size} = req.pagination;
+        const {users, total} = await userService.getPublishUsers(req.pagination);
+
+        respond(res, StatusCodes.OK, {
+            data: users, page, page_size, total_page: Math.ceil(total / page_size)
+
+        })
     }),
 
     deleteUser: asyncHandler(async (req, res, next) => {

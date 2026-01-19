@@ -23,6 +23,14 @@ const verifyToken = (req, res, next) => {
         }
         //poyload tu jwt
         req.user = decoded
+        //req = {
+        //   headers: {...},
+        //   query: { page: "2", page_size: "5" },(option)
+        //   user: {
+        //     id: "...",
+        //     admin: false || true
+        //   }
+        // }
 
         next();
     })
