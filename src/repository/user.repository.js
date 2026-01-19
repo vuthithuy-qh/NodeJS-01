@@ -1,51 +1,24 @@
-const connection = require('../config/database');
+const User = require('../models/User')
 
-const findAll = async () => {
-    const [rows] = await connection.query('SELECT * FROM Users');
-    return rows;
+const findAllUsers = (isAdmin) => {
+    if(isAdmin){
+        return User.find();
+    }
+
+    return User.find({isDeleted: false});
+
+};
+
+const findUserById = (id) => {
+    return User.findById(id);
 }
 
-const findById = async (id) =>{
-    const [rows] = await connection.query(
-        'select id, email, name, city from Users where id = ?',
-        [id]
-    );
-
-    return rows[0] || null;
-};
-
-const create = async ({email, name, city}) => {
-    const [result] = await connection.query(
-        'INSERT INTO Users (email, name, city) VALUES (?, ?, ?)',
-        [email, name, city]
-    );
-    return {
-        id: result.insertId,
-        email,
-        name,
-        city
-    };
-};
-
-const updateById = async (id, {email, name, city}) => {
-    const [result]= await connection.query(
-        'UPDATE Users SET email = ?, name = ?, city = ? WHERE id = ?',
-        [email, name, city, id]
-    );
-    return result.affectedRows > 0;
-
-};
-
-
-const deleteById = async (id) => {
-    const [result] = await connection.query(
-        'DELETE FROM Users WHERE id = ?',
-        [id]
-    );
-    return result.affectedRows ;
+const softDeleteUserById = (id) => {
+    return User.findByIdAndUpdate(id, {isDeleted: true}, {new: true});
 }
-
 
 module.exports = {
-    findAll, findById, create, updateById, deleteById
-}
+    findAllUsers,
+    findUserById,
+    softDeleteUserById
+};

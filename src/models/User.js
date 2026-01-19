@@ -9,14 +9,16 @@ const userSchema = new mongoose.Schema(
         required: true,
         minlength: 6,
         maxlength: 20,
-        unique: true
+        unique: true,
+        trim: true
     },
     email: {
         type: String,
         required: true,
         minlength: 10,
         maxlength: 50,
-        unique: true
+        unique: true,
+        trim: true
     },
     password: {
         type: String,
@@ -26,8 +28,18 @@ const userSchema = new mongoose.Schema(
     admin: {
         type: Boolean,
         default: false,
-    }
-}, {timestamps: true}
+    },
+        refreshTokens: {
+        type: [String],
+        default: []
+    }, isDeleted: {
+            type: Boolean,
+            default: false
+        }
+
+},
+    {timestamps: true},
+
 )
 
 module.exports = mongoose.model('User', userSchema)

@@ -1,30 +1,37 @@
-const User = require('../models/User')
-const {findById} = require("../repository/user.repository");
+const asyncHandler = require("../middleware/asynHandler");
+const AppError = require('../utils/ApiError');
+
+const {findAllUsers, findUserById, softDeleteUserById} = require('../repository/user.repository');
+const {respond} = require("../utils/responseHandler");
 
 const userController = {
+    getAllUser: asyncHandler(async (req, res) => {
+        const isAdmin = req.user?.admin;
 
-    getAllUser: async (req, res) => {
+        const users = await findAllUsers(isAdmin);
 
-        try{
+        respond(res, 200, users);
 
-            const user = await User.find();
+    }),
 
-            res.status(200).json(user);
+    deleteUser: asyncHandler(async (req, res, next) => {
+        const {id} = req.params;
 
-        }catch (err){
-            res.status(500).json(err);
+        const user = await findUserById(id);
+
+        if(!user) {
+            return next(new AppError('User not found', 404));
         }
-    },
 
-    //gia chuc nang xoa user
-    deleteUser: async (req, res) => {
-        try {
-            const user = await User.findById(req.params.id);
-            res.status(200).json("Delete successfully");
-        }catch (error){
-            res.status(500).json(err);
+        if(user.isDeleted){
+            return next(new AppError('User already deleted', 400));
         }
+
+        await softDeleteUserById(id);
+
+        respond(res, 200, {message: 'User soft deleted successfully'});
     }
+    )
 }
 
 
