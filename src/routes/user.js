@@ -6,7 +6,10 @@ const pagination = require("../middleware/pagination.middleware")
 
 
 
-router.delete('/:id',authMiddleware.verifyToken,authMiddleware.verifyAdmin, userController.deleteUser);
+router.delete('/:id',
+    authMiddleware.verifyToken,
+    authMiddleware.verifyAdmin,
+    userController.deleteUser);
 
 router.get(
     '/',

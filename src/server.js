@@ -3,7 +3,7 @@ const cors = require('cors');
 const cookieParser = require('cookie-parser');
 require('dotenv').config();
 const errorHandlingMiddleware = require('./middleware/errorHandler');
-
+const notFound = require('./middleware/notFound.middleware');
 
 
 const connectDB = require('./config/database');
@@ -12,7 +12,7 @@ const app = express();
 const port = process.env.PORT || 8081;
 
 // connect mongodb
-connectDB();
+
 
 // middlewares
 app.use(cors());
@@ -25,13 +25,23 @@ app.use('/v1/auth', require('./routes/auth'));
 app.use('/v1/users/', require('./routes/user'));
 app.use('/v1/admin/', require('./routes/admin'));
 
-// error handler
-app.use(require('./middleware/errorHandler'));
 
+
+app.use(notFound);
 //middleware xu li loi
 app.use(errorHandlingMiddleware);
 
 
-app.listen(port, () => {
-    console.log(`Server running on port ${port}`);
-});
+const startServer = async () => {
+    try {
+        await connectDB();
+
+        app.listen(port, () => {
+            console.log(`🚀 Server running on port ${port}`);
+        });
+    } catch (err) {
+        console.error("❌ Server start failed:", err.message);
+    }
+};
+
+startServer();

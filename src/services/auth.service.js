@@ -3,6 +3,7 @@ const User = require('../models/User');
 const ApiError = require('../utils/ApiError');
 const tokenService = require('./token.service')
 const jwt = require('jsonwebtoken');
+const {StatusCodes} = require("http-status-codes");
 
 
 const registerUser = async ({username, email, password}) => {
@@ -18,33 +19,43 @@ const registerUser = async ({username, email, password}) => {
         password: hashed
     });
 
-    await user.save();
+    // await user.save();
 
     return user;
 };
 
 
-const loginUser = async ({username, password}, res) => {
+const loginUser = async ({username, password}) => {
     const user = await User.findOne({username});
     if(!user) throw new ApiError(404, 'Wrong username');
 
     const valid = await bcrypt.compare(password, user.password);
 
+    if(!valid) {
+        throw new ApiError(StatusCodes.UNAUTHORIZED, 'Wrong password');
+    }
+
     const accessToken = tokenService.generateAccessToken(user);
     const refreshToken = tokenService.generateRefreshToken(user);
 
-    user.refreshTokens.push(refreshToken);
+    // Lưu refresh token vao redis
+    await tokenService.saveRefreshToken(user._id.toString(), refreshToken);
 
-    await user.save();
 
-    res.cookie('refreshToken', refreshToken, {
-        httpOnly: true,
-        secure: false,
-        sameSite : 'strict'
-    });
+    // await user.save();
 
-    const {password: pw, ...others} = user._doc;
-    return {...others, accessToken};
+    return {
+        user: {
+            id: user._id,
+            username: user.username,
+            email: user.email,
+            role: user.admin ? 'admin' : 'user'
+        },
+        tokens : {
+            accessToken,
+            refreshToken
+        }
+    }
 };
 
 const refreshToken = async (req, res) =>{
@@ -52,23 +63,33 @@ const refreshToken = async (req, res) =>{
 
     if(!oldRefreshToken) throw new ApiError(401, 'You are not authenticated');
 
-    const user = await User.findOne({refreshTokens: oldRefreshToken});
-    if(!user){
-        throw new ApiError(403, 'Refresh token is not valid');
-    }
-
     try{
-        const decoded = jwt.verify(oldRefreshToken, process.env.JWT_REFRESH_TOKEN);
+        const decoded = tokenService.verifyRefreshToken(oldRefreshToken)
 
-        user.refreshTokens = user.refreshTokens.filter(token => token !== oldRefreshToken);
+        const tokenExists = await tokenService.getRefreshToken(
+            decoded.id.toString(),
+            oldRefreshToken
+        )
 
+        if(!tokenExists){
+            throw new ApiError(403, 'Refresh token is expired or invalid');
+        }
+
+        const user = await User.findById(decoded.id);
+        if(!user){
+            throw new ApiError(404, 'User not found');
+        }
+
+       //xoa token cu tu redis
+        await tokenService.deleteRefreshToken(decoded.id.toString(), oldRefreshToken);
+
+        //Tao token moi
         const newAccessToken = tokenService.generateAccessToken(user);
         const newRefreshToken = tokenService.generateRefreshToken(user);
 
-        // Lưu token mới vào mảng
-        user.refreshTokens.push(newRefreshToken);
-        await user.save();
-
+        //luu token moi vao redis
+        await tokenService.saveRefreshToken(decoded.id.toString(), newRefreshToken);
+        //gui refresh token moi ve client
         res.cookie('refreshToken', newRefreshToken, {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
@@ -94,19 +115,44 @@ const refreshToken = async (req, res) =>{
 const logout = async (req, res) => {
     const refreshToken = req.cookies.refreshToken;
 
-    if(!refreshToken) return;
+    if(! refreshToken) {
+        throw new ApiError(401, 'You are not authenticated');
+    }
 
-    await User.updateOne(
-        {refreshTokens: refreshToken},
-        { $pull: { refreshTokens: refreshToken } }
-    );
+   try {
+       const decoded = tokenService.verifyRefreshToken(refreshToken);
 
-    res.clearCookie('refreshToken');
+       //kiem tra token co trong redis ko
+       const tokenExists = await tokenService.getRefreshToken(decoded.id.toString(), refreshToken);
+
+       if(!tokenExists) {
+           throw new ApiError(403, 'Refresh token is expired or invalid');
+       }
+
+       //Xoa refresh token khoi redis
+       await tokenService.deleteRefreshToken(decoded.id.toString(), refreshToken);
+       console.log(`User ${decoded.id.toString()} logged out successfully`);
+
+   }catch (err) {
+         //ignore error vi token da het han
+       console.error("Logout error: ", err.message);
+       throw new ApiError(403, 'Logout failed - Invalid or expired token' )
+
+   }
+
+   res.clearCookie('refreshToken');
 };
+
+//logout all devices
+
+const logoutAllDevices = async (userId) => {
+    await tokenService.deleteAllRefreshTokens(userId.toString());
+}
 
 module.exports = {
     registerUser,
     loginUser,
     refreshToken,
-    logout
+    logout,
+    logoutAllDevices
 }
